@@ -1,10 +1,13 @@
+# import torch
 import torch.nn as nn
 
 from .advtrainer import AdvTrainer
 
 
-class Standard(AdvTrainer):
+class Clean(AdvTrainer):
     r"""
+    Clean training without adversarial examples
+
     Attributes:
         self.rmodel : rmodel.
         self.device : device where rmodel is.
@@ -27,6 +30,7 @@ class Standard(AdvTrainer):
         images, labels = train_data
         images = images.to(self.device)
         labels = labels.to(self.device)
+
         logits = self.rmodel(images)
 
         cost = nn.CrossEntropyLoss(reduction="none")(logits, labels)
