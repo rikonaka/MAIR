@@ -46,8 +46,8 @@ class TRADES(AdvTrainer):
 
         adv_images = self.atk(images)
         logits_adv = self.rmodel(adv_images)
-        probs_clean = F.softmax(logits_clean, dim=1)
-        log_probs_adv = F.log_softmax(logits_adv, dim=1)
+        probs_clean = torch.clamp(F.softmax(logits_clean, dim=1), min=1e-12)
+        log_probs_adv = torch.log(torch.clamp(F.softmax(logits_adv, dim=1), min=1e-12))
         loss_kl = nn.KLDivLoss(reduction="none")(log_probs_adv, probs_clean).sum(dim=1)
 
         cost = loss_ce + self.beta * loss_kl

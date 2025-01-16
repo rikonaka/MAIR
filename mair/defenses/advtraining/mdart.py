@@ -58,18 +58,20 @@ class MDART(AdvTrainer):
         rmodel2 = self.rmodel2s[index]
         logits_adv2 = rmodel2(adv_images)
 
-        probs_adv = F.softmax(logits_adv, dim=1)
+        probs_adv = torch.clamp(F.softmax(logits_adv, dim=1), min=1e-12)
 
         # Caculate BCELoss
         tmp1 = torch.argsort(probs_adv, dim=1)[:, -2:]
         new_y = torch.where(tmp1[:, -1] == labels, tmp1[:, -2], tmp1[:, -1])
         loss_bce_adv = F.cross_entropy(
             logits_adv, labels, reduction="none"
-        ) + F.nll_loss(torch.log(1.0001 - probs_adv + 1e-12), new_y, reduction="none")
+        ) + F.nll_loss(
+            torch.log(torch.clamp(1.0 - probs_adv, min=1e-12)), new_y, reduction="none"
+        )
 
         # Caculate KLLoss
-        probs_clean = F.softmax(logits_clean, dim=1)
-        log_prob_adv = torch.log(probs_adv + 1e-12)
+        probs_clean = torch.clamp(F.softmax(logits_clean, dim=1), min=1e-12)
+        log_prob_adv = torch.log(probs_adv)
         loss_kl = torch.sum(
             nn.KLDivLoss(reduction="none")(log_prob_adv, probs_clean), dim=1
         )
@@ -79,8 +81,8 @@ class MDART(AdvTrainer):
         loss_weighted_kl = loss_kl * (1.0000001 - true_probs)
 
         # MDART
-        adv_probs_1 = F.softmax(logits_adv, dim=1) + 1e-7
-        adv_probs_2 = F.softmax(logits_adv2, dim=1) + 1e-7
+        adv_probs_1 = torch.clamp(F.softmax(logits_adv, dim=1), min=1e-12)
+        adv_probs_2 = torch.clamp(F.softmax(logits_adv2, dim=1), min=1e-12)
         adv_true_probs_1 = torch.gather(
             adv_probs_1, 1, (labels.unsqueeze(1)).long()
         ).squeeze()
